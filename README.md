@@ -1,418 +1,411 @@
-# Novelty Score Engine 🔬
+# Novelty Score API
 
-A complete standalone system for evaluating the novelty of R&D proposals using AI-powered semantic similarity analysis.
+**API-only microservice for R&D proposal novelty detection**
 
-## 🎯 Overview
+Version: 2.0.0
 
-The Novelty Score Engine compares new R&D proposals against previously ingested proposals to compute a novelty score (0-100). Higher scores indicate more unique and novel proposals.
+---
 
-### Tech Stack
-- **Backend**: FastAPI (Python)
-- **Database**: PostgreSQL with pgvector extension
-- **AI Embeddings**: Sentence Transformers (all-mpnet-base-v2)
-- **Frontend**: React with Vite
-
-## 📁 Project Structure
-
-```
-novelty-check/
-├── backend/
-│   ├── main.py              # FastAPI application
-│   ├── embeddings.py        # Embedding generation
-│   ├── db.py                # Database operations
-│   ├── models.py            # Pydantic models
-│   ├── routers/
-│   │   ├── ingest.py        # Ingestion endpoint
-│   │   └── novelty.py       # Novelty check endpoint
-│   ├── migrations/
-│   │   ├── 001_init.sql     # Database schema
-│   │   └── README.md        # Migration instructions
-│   ├── requirements.txt
-│   └── .env.example
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── Ingest.jsx
-│   │   │   └── NoveltyCheck.jsx
-│   │   ├── api/
-│   │   │   └── api.js
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── package.json
-│   └── .env.example
-└── README.md
-```
-
-## 🚀 Installation & Setup
+## 🚀 Quick Start
 
 ### Prerequisites
+- Python 3.9+
+- PostgreSQL 12+ with pgvector extension
+- Virtual environment
 
-1. **Python 3.9+**
-2. **Node.js 18+**
-3. **PostgreSQL 12+**
-4. **pgvector extension**
-
-### Step 1: Database Setup
-
-#### Install PostgreSQL and pgvector
-
-**Windows:**
-```powershell
-# Install PostgreSQL (if not already installed)
-# Download from: https://www.postgresql.org/download/windows/
-
-# Install pgvector
-# Download from: https://github.com/pgvector/pgvector/releases
-# Follow installation instructions for Windows
-```
-
-**Linux/Mac:**
-```bash
-# Ubuntu/Debian
-sudo apt install postgresql postgresql-15-pgvector
-
-# macOS
-brew install postgresql pgvector
-```
-
-#### Create Database
+### Installation
 
 ```powershell
-# Start PostgreSQL service (if not running)
-# Windows: Check Services or use pg_ctl
-
-# Connect to PostgreSQL
-psql -U postgres
-
-# Create database
-CREATE DATABASE novelty_db;
-
-# Connect to the database
-\c novelty_db
-
-# Enable pgvector extension
-CREATE EXTENSION vector;
-
-# Exit
-\q
-```
-
-#### Run Migrations
-
-```powershell
-cd backend
-psql -U postgres -d novelty_db -f migrations/001_init.sql
-```
-
-### Step 2: Backend Setup
-
-```powershell
-# Navigate to backend directory
+# 1. Navigate to backend directory
 cd backend
 
-# Create virtual environment
+# 2. Create virtual environment
 python -m venv venv
 
-# Activate virtual environment
+# 3. Activate virtual environment (Windows)
 .\venv\Scripts\Activate.ps1
 
-# Install dependencies
+# 4. Install dependencies
 pip install -r requirements.txt
 
-# Create .env file
+# 5. Configure environment variables
 Copy-Item .env.example .env
-
-# Edit .env file with your database credentials
-# DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/novelty_db
+# Edit .env with your database credentials
 ```
 
-### Step 3: Frontend Setup
+### Environment Variables
 
-```powershell
-# Navigate to frontend directory
-cd ..\frontend
-
-# Install dependencies
-npm install
-
-# Create .env file
-Copy-Item .env.example .env
-```
-
-## 🎮 Running the Application
-
-### Start Backend Server
-
-```powershell
-# From backend directory (with venv activated)
-cd backend
-.\venv\Scripts\Activate.ps1
-python main.py
-
-# Server will start at: http://localhost:8000
-# API docs available at: http://localhost:8000/docs
-```
-
-### Start Frontend Development Server
-
-```powershell
-# From frontend directory (in a new terminal)
-cd frontend
-npm run dev
-
-# Frontend will start at: http://localhost:5173
-```
-
-## 📡 API Endpoints
-
-### 1. Ingest Proposal
-
-**POST** `/api/ingest`
-
-Upload and store a new R&D proposal.
-
-**Request:**
-- `file`: PDF or DOCX file (multipart/form-data)
-- `title`: Optional proposal title (form field)
-
-**Response:**
-```json
-{
-  "id": 1,
-  "title": "Quantum Computing Research",
-  "message": "Proposal ingested successfully"
-}
-```
-
-### 2. Check Novelty (Text)
-
-**POST** `/api/novelty`
-
-Check novelty score for proposal text.
-
-**Request:**
-```json
-{
-  "text": "Full proposal text content..."
-}
-```
-
-**Response:**
-```json
-{
-  "novelty_score": 73.5,
-  "similar_proposals": [
-    {
-      "id": 5,
-      "title": "Previous Research",
-      "similarity": 0.265
-    }
-  ],
-  "total_proposals_checked": 10,
-  "interpretation": "Novel - This proposal has significant unique elements"
-}
-```
-
-### 3. Check Novelty (File)
-
-**POST** `/api/novelty/file`
-
-Check novelty score from uploaded file.
-
-**Request:**
-- `file`: PDF or DOCX file (multipart/form-data)
-
-**Response:** Same as text-based novelty check
-
-## 🎨 Frontend Pages
-
-### 1. Ingest Page (`/ingest`)
-- Upload PDF/DOCX proposals
-- Optional title input
-- Shows success/error messages
-- Explains the ingestion process
-
-### 2. Novelty Check Page (`/novelty-check`)
-- Two input methods: paste text or upload file
-- Real-time novelty analysis
-- Visual score display with color coding
-- Table of similar proposals with similarity percentages
-- Interpretation guide
-
-## 🧮 Novelty Score Calculation
-
-The novelty score is calculated using the following formula:
-
-```
-novelty_score = (1 - average_similarity) × 100
-```
-
-Where:
-- **average_similarity**: Average cosine similarity of top 5 most similar proposals
-- **Score Range**: 0-100
-  - **80-100**: Highly Novel
-  - **60-79**: Novel
-  - **40-59**: Moderately Novel
-  - **20-39**: Low Novelty
-  - **0-19**: Very Low Novelty
-
-## 🔧 Configuration
-
-### Backend Environment Variables (`.env`)
+Create a `.env` file in the backend directory:
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/novelty_db
+DATABASE_URL=postgresql://postgres:your_password@localhost:5432/novelty_db
 HOST=0.0.0.0
 PORT=8000
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 EMBEDDING_MODEL=all-mpnet-base-v2
 ```
 
-### Frontend Environment Variables (`.env`)
+### Database Setup
 
-```env
-VITE_API_URL=http://localhost:8000/api
+```powershell
+# Run migrations
+$env:PGPASSWORD='your_password'
+psql -U postgres -d novelty_db -f migrations/001_init.sql
+psql -U postgres -d novelty_db -f migrations/002_refactor_for_api.sql
 ```
+
+### Run the API
+
+```powershell
+# Development mode (with auto-reload)
+python main.py
+
+# Production mode
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+The API will be available at: `http://localhost:8000`
+
+Interactive docs: `http://localhost:8000/docs`
+
+---
+
+## 📡 API Endpoint
+
+### POST `/api/novelty-check`
+
+Check novelty score for a proposal and store it in the database.
+
+**Request Body:**
+
+```json
+{
+  "application_number": "APP-2024-001",
+  "extracted_text": "This is the full text content of the R&D proposal..."
+}
+```
+
+**Response:**
+
+```json
+{
+  "application_number": "APP-2024-001",
+  "novelty_score": 82.5,
+  "total_proposals_checked": 134,
+  "similar_proposals": ["APP-2023-042", "APP-2023-156"]
+}
+```
+
+**Fields:**
+- `application_number` (string): Unique application identifier
+- `extracted_text` (string): Full text content (minimum 10 characters)
+- `novelty_score` (float): Novelty score from 0-100 (higher = more novel)
+- `total_proposals_checked` (int): Total number of proposals in database
+- `similar_proposals` (array): List of application numbers for most similar proposals
+
+---
+
+## 💻 Usage Examples
+
+### cURL
+
+```bash
+curl -X POST "http://localhost:8000/api/novelty-check" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "application_number": "APP-2024-001",
+    "extracted_text": "We propose a novel quantum computing approach using superconducting qubits to solve complex optimization problems in drug discovery and molecular simulation. Our method leverages advanced error correction techniques..."
+  }'
+```
+
+### Node.js (axios)
+
+```javascript
+const axios = require('axios');
+
+async function checkNovelty(applicationNumber, extractedText) {
+  try {
+    const response = await axios.post('http://localhost:8000/api/novelty-check', {
+      application_number: applicationNumber,
+      extracted_text: extractedText
+    });
+    
+    console.log('Novelty Score:', response.data.novelty_score);
+    console.log('Total Proposals Checked:', response.data.total_proposals_checked);
+    console.log('Similar Proposals:', response.data.similar_proposals);
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error checking novelty:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// Usage
+checkNovelty(
+  'APP-2024-001',
+  'Full proposal text content here...'
+).then(result => {
+  console.log('Result:', result);
+});
+```
+
+### Node.js (fetch)
+
+```javascript
+async function checkNovelty(applicationNumber, extractedText) {
+  const response = await fetch('http://localhost:8000/api/novelty-check', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      application_number: applicationNumber,
+      extracted_text: extractedText
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}
+
+// Usage
+checkNovelty('APP-2024-001', 'Proposal text...')
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+### Python (requests)
+
+```python
+import requests
+
+def check_novelty(application_number: str, extracted_text: str) -> dict:
+    url = "http://localhost:8000/api/novelty-check"
+    
+    payload = {
+        "application_number": application_number,
+        "extracted_text": extracted_text
+    }
+    
+    response = requests.post(url, json=payload)
+    response.raise_for_status()
+    
+    return response.json()
+
+# Usage
+result = check_novelty(
+    "APP-2024-001",
+    "Full proposal text content here..."
+)
+
+print(f"Novelty Score: {result['novelty_score']}")
+print(f"Similar Proposals: {result['similar_proposals']}")
+```
+
+---
+
+## 🔧 How It Works
+
+1. **Input**: Accepts `application_number` and `extracted_text`
+2. **Embedding**: Generates 768-dimensional semantic embedding using Sentence Transformers (all-mpnet-base-v2)
+3. **Storage**: Stores (or updates) the proposal in PostgreSQL with pgvector
+4. **Similarity**: Queries pgvector to find top 5 most similar proposals using cosine distance
+5. **Score**: Calculates novelty score: `(1 - average_similarity) × 100`
+6. **Response**: Returns novelty score and list of similar application numbers
+
+**Novelty Score Interpretation:**
+- **80-100**: Highly Novel
+- **60-79**: Novel
+- **40-59**: Moderately Novel
+- **20-39**: Low Novelty
+- **0-19**: Very Low Novelty
+
+---
 
 ## 📊 Database Schema
 
-### `proposals` Table
+### `proposals` table
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | SERIAL | Primary key |
-| title | TEXT | Proposal title |
-| full_text | TEXT | Full proposal text |
+| application_number | TEXT | Unique application identifier |
+| extracted_text | TEXT | Full proposal text |
 | embedding | VECTOR(768) | Semantic embedding |
 | created_at | TIMESTAMP | Creation timestamp |
 | updated_at | TIMESTAMP | Last update timestamp |
 
-### Indexes
+**Indexes:**
+- `unique_application_number`: Unique constraint on application_number
+- `idx_application_number`: B-tree index for fast lookups
+- `proposals_embedding_idx`: IVFFlat index for vector similarity search
 
-- `proposals_embedding_idx`: IVFFlat index for fast vector similarity search
-- `proposals_created_at_idx`: Index on creation timestamp
+---
 
-## 🧪 Testing the System
+## 🐳 Docker Deployment (Optional)
 
-### 1. Test Ingestion
+### Dockerfile
 
-```powershell
-# Using curl (PowerShell)
-curl -X POST "http://localhost:8000/api/ingest" `
-  -F "file=@sample_proposal.pdf" `
-  -F "title=Test Proposal"
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Expose port
+EXPOSE 8000
+
+# Run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-### 2. Test Novelty Check
+### docker-compose.yml
 
-```powershell
-# Using curl (PowerShell)
-$body = @{
-  text = "This is a sample R&D proposal about quantum computing and machine learning..."
-} | ConvertTo-Json
+```yaml
+version: '3.8'
 
-curl -X POST "http://localhost:8000/api/novelty" `
-  -H "Content-Type: application/json" `
-  -d $body
+services:
+  postgres:
+    image: ankane/pgvector
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: novelty_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/novelty_db
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
 ```
 
-## 🔍 How It Works
+**Run with Docker:**
 
-1. **Document Ingestion**
-   - Upload PDF/DOCX file
-   - Extract text using pdfplumber/python-docx
-   - Generate 768-dimensional embedding using Sentence Transformers
-   - Store in PostgreSQL with pgvector
+```bash
+docker-compose up -d
+```
 
-2. **Novelty Evaluation**
-   - Generate embedding for new proposal
-   - Query pgvector for top 5 most similar proposals (cosine similarity)
-   - Calculate novelty score: `(1 - avg_similarity) × 100`
-   - Return score and similar proposals
+---
 
-3. **Vector Search**
-   - Uses pgvector's IVFFlat index for fast approximate nearest neighbor search
-   - Cosine distance operator (`<=>`) for similarity comparison
-   - Optimized for large-scale proposal databases
+## 🔒 Production Considerations
 
-## 📈 Performance Considerations
+1. **Security:**
+   - Use environment variables for sensitive data
+   - Implement authentication/authorization if needed
+   - Configure CORS appropriately
+   - Use HTTPS in production
 
-- **Embedding Generation**: ~100-500ms per document (depending on length)
-- **Vector Search**: Sub-millisecond with proper indexing
-- **Database**: IVFFlat index provides O(log n) search complexity
-- **Scalability**: Tested with 10,000+ proposals
+2. **Performance:**
+   - The first model load takes ~1-2 minutes (downloads 420MB)
+   - Subsequent requests are fast (~100-500ms)
+   - Consider using Gunicorn with multiple workers
 
-## 🛠️ Troubleshooting
+3. **Scaling:**
+   - Database connection pool is configured (min: 2, max: 10)
+   - pgvector IVFFlat index provides O(log n) search
+   - Can handle 1000+ proposals efficiently
 
-### Common Issues
+4. **Monitoring:**
+   - Check `/health` endpoint for service status
+   - Monitor database connection pool
+   - Log embedding generation times
 
-1. **pgvector extension not found**
-   - Ensure pgvector is installed for your PostgreSQL version
-   - Run `CREATE EXTENSION vector;` in your database
+---
 
-2. **Connection refused (backend)**
-   - Check if PostgreSQL is running
-   - Verify DATABASE_URL in .env file
-   - Check firewall settings
+## 🆘 Troubleshooting
 
-3. **CORS errors (frontend)**
-   - Verify CORS_ORIGINS in backend .env
-   - Check if backend is running on correct port
+### pgvector not found
+```bash
+# Ensure pgvector is installed in PostgreSQL
+psql -U postgres -d novelty_db -c "CREATE EXTENSION vector;"
+```
 
-4. **Out of memory during embedding**
-   - Reduce batch size
-   - Use CPU instead of GPU (automatic fallback)
+### Connection refused
+```bash
+# Check if database is running
+pg_isready -h localhost -p 5432
 
-5. **Slow vector search**
-   - Ensure IVFFlat index is created
-   - Adjust `lists` parameter in index creation
+# Verify DATABASE_URL in .env
+```
 
-## 🔒 Security Notes
+### Model download fails
+```bash
+# The model will download automatically on first run
+# Ensure internet connection and ~500MB free space
+```
 
-- Never commit `.env` files
-- Use strong database passwords in production
-- Implement authentication for production deployment
-- Validate and sanitize all file uploads
-- Set file size limits (currently 10MB recommended)
+### Import errors
+```bash
+# Reinstall dependencies
+pip install --force-reinstall -r requirements.txt
+```
 
-## 📝 Production Deployment Checklist
+---
 
-- [ ] Set up proper environment variables
-- [ ] Configure HTTPS/SSL
-- [ ] Implement authentication/authorization
-- [ ] Set up database backups
-- [ ] Configure logging and monitoring
-- [ ] Use production WSGI server (e.g., Gunicorn)
-- [ ] Set up reverse proxy (e.g., Nginx)
-- [ ] Implement rate limiting
-- [ ] Configure CORS properly
-- [ ] Set up CI/CD pipeline
+## 📝 API Response Codes
 
-## 📚 API Documentation
+- `200 OK`: Successful novelty check
+- `400 Bad Request`: Invalid input (missing fields, text too short)
+- `500 Internal Server Error`: Server-side error (database, embedding generation)
 
-Interactive API documentation available at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+---
 
-## 🤝 Contributing
+## 🎯 Project Structure
 
-This is a standalone module. To extend:
-1. Add new endpoints in `routers/`
-2. Extend database schema in migrations
-3. Update frontend pages as needed
-4. Test thoroughly before deployment
+```
+novelty-check/
+├── backend/
+│   ├── main.py              # FastAPI application entry point
+│   ├── models.py            # Pydantic models for request/response
+│   ├── db.py                # Database operations
+│   ├── embeddings.py        # Embedding generation logic
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   └── novelty_check.py # Novelty check endpoint
+│   ├── migrations/
+│   │   ├── 001_init.sql
+│   │   └── 002_refactor_for_api.sql
+│   ├── requirements.txt
+│   ├── .env.example
+│   └── .env
+└── README.md
+```
 
-## 📄 License
+---
 
-This project is provided as-is for R&D proposal novelty detection purposes.
+## 📚 Dependencies
 
-## 🆘 Support
-
-For issues or questions:
-1. Check the troubleshooting section
-2. Review API documentation
-3. Check PostgreSQL and pgvector documentation
-4. Verify all dependencies are installed correctly
+- **FastAPI**: Modern web framework for APIs
+- **Uvicorn**: ASGI server
+- **asyncpg**: Async PostgreSQL driver
+- **sentence-transformers**: AI embeddings (all-mpnet-base-v2 model)
+- **python-dotenv**: Environment variable management
+- **pydantic**: Data validation
 
 ---
 

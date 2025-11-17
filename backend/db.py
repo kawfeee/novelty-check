@@ -43,36 +43,58 @@ async def get_db():
         yield connection
 
 async def insert_proposal(
-    title: str,
-    full_text: str,
+    application_number: str,
+    extracted_text: str,
     embedding: List[float]
 ) -> int:
     """
     Insert a new proposal into the database
     
     Args:
-        title: Proposal title
-        full_text: Full proposal text
+        application_number: Unique application identifier
+        extracted_text: Extracted proposal text
         embedding: 768-dimensional embedding vector
         
     Returns:
         ID of inserted proposal
     """
     async with get_db() as conn:
-        result = await conn.fetchrow(
-            """
-            INSERT INTO proposals (title, full_text, embedding)
-            VALUES ($1, $2, $3::vector)
-            RETURNING id
-            """,
-            title,
-            full_text,
-            str(embedding)
+        # Check if application_number already exists
+        existing = await conn.fetchrow(
+            "SELECT id FROM proposals WHERE application_number = $1",
+            application_number
         )
+        
+        if existing:
+            # Update existing record
+            result = await conn.fetchrow(
+                """
+                UPDATE proposals 
+                SET extracted_text = $2, embedding = $3::vector, updated_at = CURRENT_TIMESTAMP
+                WHERE application_number = $1
+                RETURNING id
+                """,
+                application_number,
+                extracted_text,
+                str(embedding)
+            )
+        else:
+            # Insert new record
+            result = await conn.fetchrow(
+                """
+                INSERT INTO proposals (application_number, extracted_text, embedding)
+                VALUES ($1, $2, $3::vector)
+                RETURNING id
+                """,
+                application_number,
+                extracted_text,
+                str(embedding)
+            )
         return result['id']
 
 async def find_similar_proposals(
     embedding: List[float],
+    exclude_application_number: Optional[str] = None,
     limit: int = 5
 ) -> List[Dict[str, Any]]:
     """
@@ -80,45 +102,60 @@ async def find_similar_proposals(
     
     Args:
         embedding: Query embedding vector
+        exclude_application_number: Application number to exclude from results
         limit: Number of similar proposals to return
         
     Returns:
-        List of similar proposals with similarity scores
+        List of similar proposals with application numbers and similarity scores
     """
     async with get_db() as conn:
-        results = await conn.fetch(
-            """
-            SELECT 
-                id,
-                title,
-                1 - (embedding <=> $1::vector) AS similarity
-            FROM proposals
-            ORDER BY embedding <=> $1::vector
-            LIMIT $2
-            """,
-            str(embedding),
-            limit
-        )
+        if exclude_application_number:
+            results = await conn.fetch(
+                """
+                SELECT 
+                    application_number,
+                    1 - (embedding <=> $1::vector) AS similarity
+                FROM proposals
+                WHERE application_number != $3
+                ORDER BY embedding <=> $1::vector
+                LIMIT $2
+                """,
+                str(embedding),
+                limit,
+                exclude_application_number
+            )
+        else:
+            results = await conn.fetch(
+                """
+                SELECT 
+                    application_number,
+                    1 - (embedding <=> $1::vector) AS similarity
+                FROM proposals
+                ORDER BY embedding <=> $1::vector
+                LIMIT $2
+                """,
+                str(embedding),
+                limit
+            )
         
         return [
             {
-                "id": row['id'],
-                "title": row['title'],
+                "application_number": row['application_number'],
                 "similarity": round(float(row['similarity']), 4)
             }
             for row in results
         ]
 
-async def get_proposal_by_id(proposal_id: int) -> Optional[Dict[str, Any]]:
-    """Get a proposal by its ID"""
+async def get_proposal_by_application_number(application_number: str) -> Optional[Dict[str, Any]]:
+    """Get a proposal by its application number"""
     async with get_db() as conn:
         result = await conn.fetchrow(
             """
-            SELECT id, title, full_text, created_at
+            SELECT id, application_number, extracted_text, created_at
             FROM proposals
-            WHERE id = $1
+            WHERE application_number = $1
             """,
-            proposal_id
+            application_number
         )
         
         if result:

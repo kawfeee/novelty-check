@@ -1,38 +1,16 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
-from datetime import datetime
+from typing import List, Dict
 
-class ProposalBase(BaseModel):
-    title: str = Field(..., description="Proposal title")
-    full_text: str = Field(..., description="Full proposal text content")
-
-class ProposalCreate(ProposalBase):
-    pass
-
-class ProposalResponse(BaseModel):
-    id: int
-    title: str
-    message: str = "Proposal ingested successfully"
-    
-    class Config:
-        from_attributes = True
-
-class NoveltyRequest(BaseModel):
-    text: str = Field(..., description="Proposal text to check for novelty", min_length=10)
+class NoveltyCheckRequest(BaseModel):
+    application_number: str = Field(..., description="Unique application identifier", min_length=1)
+    extracted_text: str = Field(..., description="Extracted proposal text content", min_length=10)
 
 class SimilarProposal(BaseModel):
-    id: int
-    title: str
-    similarity: float = Field(..., description="Similarity score (0-1)")
+    application_number: str
+    similarity_percentage: float = Field(..., description="Similarity percentage (0-100)")
 
-class NoveltyResponse(BaseModel):
+class NoveltyCheckResponse(BaseModel):
+    application_number: str
     novelty_score: float = Field(..., description="Novelty score (0-100)")
-    similar_proposals: List[SimilarProposal]
     total_proposals_checked: int
-    interpretation: str
-
-class HealthResponse(BaseModel):
-    status: str
-    database_connected: bool
-    model_loaded: bool
-    total_proposals: int
+    similar_proposals: List[SimilarProposal] = Field(..., description="List of similar proposals with similarity percentages")
