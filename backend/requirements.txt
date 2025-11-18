@@ -1,8 +1,9 @@
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
 asyncpg==0.30.0
-sentence-transformers>=2.3.0
+sentence-transformers==3.3.1
 python-dotenv==1.0.0
 pydantic==2.10.0
 numpy
-torch
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
