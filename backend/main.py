@@ -57,7 +57,26 @@ async def setup_database():
                 
                 print("✅ Database setup complete!")
             else:
-                print("✅ Database already initialized")
+                # Check vector dimensions and update if needed
+                current_dims = await conn.fetchval("""
+                    SELECT atttypmod 
+                    FROM pg_attribute 
+                    WHERE attrelid = 'proposals'::regclass 
+                    AND attname = 'embedding'
+                """)
+                
+                # atttypmod stores dimensions + 4, so 772 = 768 dims
+                if current_dims == 772:  # 768 dimensions (old model)
+                    print("🔄 Updating vector dimensions for MiniLM model...")
+                    migration_003 = Path(__file__).parent / "migrations" / "003_update_vector_dimensions.sql"
+                    if migration_003.exists():
+                        sql = migration_003.read_text()
+                        await conn.execute(sql)
+                        print("✅ Migration 003 completed - Vector dimensions updated to 384")
+                    else:
+                        print("⚠️ Migration 003 not found")
+                else:
+                    print("✅ Database already initialized")
                 
         except Exception as e:
             print(f"⚠️ Database setup error (may be normal if already setup): {e}")
