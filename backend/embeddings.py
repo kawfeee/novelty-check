@@ -1,9 +1,11 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from typing import List
+import os
 
 # Load the model once at module level for efficiency
-MODEL_NAME = "all-mpnet-base-v2"
+# Using a smaller model for memory-constrained environments
+MODEL_NAME = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 model = None
 
 def load_model():
